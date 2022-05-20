@@ -8,6 +8,7 @@ This program takes in a grid of numbers representing a truffle field and each ce
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Scanner;
 
 public class Truffle {
@@ -20,7 +21,7 @@ public class Truffle {
         // Populate the grid with values from the file.
         Scanner sc = new Scanner(f);
         int i = 0;
-        while (sc.hasNextLine()) {
+        for (int k = 0; k < numRows; k++) {
             String line = sc.nextLine();
             String[] lineSplit = line.split("\\s+");
             for (int j = 0; j < numColumns; j++) {
@@ -29,6 +30,7 @@ public class Truffle {
             i++;
         }
 
+        System.out.println();
         System.out.println("Truffle field given:");
         print2dArray(grid);
         sc.close();
@@ -40,66 +42,125 @@ public class Truffle {
     // The algorithm that finds an optimal path through the truffle field which
     // maximizes the yield.
     public static void findPath(int[][] grid) {
-        // Find the optimal starting cell in the first row.
-        int[] startingCell = findMax(grid[0]);
-        int value = startingCell[0];
-        // This index variable will be used to keep track of which column we are in at
-        // any given time.
-        int index = startingCell[1];
-        System.out.println("We will start at the cell at index " + startingCell[1] + ", which has a value of "
-                + startingCell[0] + ".");
 
-        int row = 1;
-        int totalYield = value;
-        while (row < grid.length) {
-            // If we are at the far left cell of the row, only consider cells down and
-            // diagonally right.
-            if (index == 0) {
-                int[] possibleMoves = getSubarray(grid[row], 0, 1);
-                int[] nextMove = findMax(possibleMoves);
-                value = nextMove[0];
-                index = nextMove[1];
-                System.out.println("The next move to row " + (row + 1) + " is to the cell at index " + index
-                        + " with a value of " + value + ".");
-                totalYield += value;
+        // Account for a grid with only one column
+        if (grid[0].length == 1) {
+            int totalYield = 0;
+            for (int i = 1; i < grid.length; i++) {
+                totalYield += grid[i][0];
+                System.out.println("Moved to the next cell down at row " + i + " with a value of " + grid[i][0] + ".");
             }
-
-            // If we are at the far right cell of the row, only consider cells down and
-            // diagonally left.
-            if (index == grid[0].length - 1) {
-                int[] possibleMoves = getSubarray(grid[row], index - 1, index);
-                int[] nextMove = findMax(possibleMoves);
-                value = nextMove[0];
-                // If the next move is at index(index-1), update the index variable accordingly.
-                if (value == possibleMoves[0]) {
-                    index = index - 1;
-                }
-                System.out.println("The next move to row " + (row + 1) + " is to the cell at index " + index
-                        + " with a value of " + value + ".");
-                totalYield += value;
-            }
-
-            // If we are at a middle cell, consider cells diagonally left, down, and
-            // diagonally right.
-            else {
-                int[] possibleMoves = getSubarray(grid[row], index - 1, index + 1);
-                int[] nextMove = findMax(possibleMoves);
-                value = nextMove[0];
-                // If the next move is at index(index-1) or index(index+1), update the index
-                // variable accordingly.
-                if (value == possibleMoves[0]) {
-                    index = index - 1;
-                } else if (value == possibleMoves[2]) {
-                    index = index + 1;
-                }
-                System.out.println("The next move to row " + (row + 1) + " is to the cell at index " + index
-                        + " with a value of " + value + ".");
-                totalYield += value;
-            }
-
-            row++;
+            System.out.println("The total truffle yield is " + totalYield + ".");
         }
-        System.out.println("The total truffle yield from this path is " + totalYield + ".");
+
+        else {
+
+            // Keep track of all the possible paths, the best yield of any path so far, and
+            // which path had it.
+            ArrayList<ArrayList<int[]>> paths = new ArrayList<ArrayList<int[]>>();
+            int maxYield = 0;
+            int indexOfBestYield = 0;
+
+            // Go through every possible starting cell, testing the greedy path from each
+            // and finding the one with the best yield.
+            for (int i = 0; i < grid[0].length; i++) {
+                ArrayList<int[]> path = new ArrayList<int[]>();
+                int[] startingCell = { grid[0][i], i };
+                path.add(startingCell);
+                int value = startingCell[0];
+                int column = startingCell[1];
+                int totalYield = value;
+                int row = 1;
+
+                // System.out.println("Testing starting cell at index " + i + " with value " +
+                // value + ".");
+                while (row < grid.length) {
+                    // If we are at the far left cell of the row, only consider cells down and
+                    // diagonally right.
+                    if (column == 0) {
+                        int[] possibleMoves = getSubarray(grid[row], 0, 1);
+                        int[] nextMove = findMax(possibleMoves);
+                        value = nextMove[0];
+                        // If the next move is diagonally right at index(index+1), update the index
+                        // variable accordingly.
+                        if (value == possibleMoves[1]) {
+                            column = column + 1;
+                        }
+                        /*
+                         * System.out.println("The next move to row " + (row + 1) +
+                         * " is to the cell at index " + index
+                         * + " with a value of " + value + ".");
+                         */
+                        nextMove[1] = column;
+                        path.add(nextMove);
+                        totalYield += value;
+                    }
+
+                    // If we are at the far right cell of the row, only consider cells down and
+                    // diagonally left.
+                    else if (column == grid[0].length - 1) {
+                        int[] possibleMoves = getSubarray(grid[row], column - 1, column);
+                        int[] nextMove = findMax(possibleMoves);
+                        value = nextMove[0];
+                        // If the next move is diagonally left at index(index-1), update the index
+                        // variable accordingly.
+                        if (value == possibleMoves[0]) {
+                            column = column - 1;
+                        }
+                        /*
+                         * System.out.println("The next move to row " + (row + 1) +
+                         * " is to the cell at index " + index
+                         * + " with a value of " + value + ".");
+                         */
+                        nextMove[1] = column;
+                        path.add(nextMove);
+                        totalYield += value;
+                    }
+
+                    // If we are at a middle cell, consider cells diagonally left, down, and
+                    // diagonally right.
+                    else {
+                        int[] possibleMoves = getSubarray(grid[row], column - 1, column + 1);
+                        int[] nextMove = findMax(possibleMoves);
+                        value = nextMove[0];
+                        // If the next move is at index(index-1) or index(index+1), update the index
+                        // variable accordingly.
+                        if (value == possibleMoves[0]) {
+                            column = column - 1;
+                        } else if (value == possibleMoves[2]) {
+                            column = column + 1;
+                        }
+                        /*
+                         * System.out.println("The next move to row " + (row + 1) +
+                         * " is to the cell at index " + index
+                         * + " with a value of " + value + ".");
+                         */
+                        nextMove[1] = column;
+                        path.add(nextMove);
+                        totalYield += value;
+                    }
+                    row++;
+                }
+                // printArrayList(path);
+                // System.out.println("The total truffle yield from this path is " + totalYield
+                // + ".");
+
+                // If this most recent path is better than the previous ones, record it as the
+                // best path so far.
+                if (totalYield > maxYield) {
+                    maxYield = totalYield;
+                    indexOfBestYield = i;
+                }
+                paths.add(path);
+                row = 0;
+            }
+            System.out.println();
+            System.out.println(
+                    "Each entry in the following optimal path is in the form [value, column], where value is the value of the cell being moved to, and column is the index of the column that cell is in. e.g. [1, 2] would mean a cell with value 1 in the third column.");
+            // printAllPaths(paths);
+            System.out.println("The largest yield is " + maxYield + ", from path " + (indexOfBestYield + 1)
+                    + ". This path is: " + printArrayList(paths.get(indexOfBestYield)));
+        }
     }
 
     // Counts the number of lines of a file.
@@ -123,8 +184,6 @@ public class Truffle {
         String[] lineSplit = line.split("\\s+");
         int numColumns = lineSplit.length;
         sc.close();
-        // System.out.println("There are " + numColumns + " values in a line of the
-        // file.");
         return numColumns;
     }
 
@@ -145,7 +204,7 @@ public class Truffle {
         int max = arr[0];
         int index = 0;
         for (int i = 1; i < arr.length; i++) {
-            if (arr[i] >= max) {
+            if (arr[i] > max) {
                 max = arr[i];
                 index = i;
             }
@@ -164,5 +223,25 @@ public class Truffle {
             index++;
         }
         return subarray;
+    }
+
+    // Return a string representation of an arraylist of arrays
+    public static String printArrayList(ArrayList<int[]> a) {
+        String s = "";
+        for (int i = 0; i < a.size(); i++) {
+            s += ("Row " + (i + 1) + ": " + Arrays.toString(a.get(i)) + ". ");
+        }
+        return s;
+    }
+
+    // Print out an arraylist of arraylists of arrays
+    public static void printAllPaths(ArrayList<ArrayList<int[]>> a) {
+        for (int i = 0; i < a.size(); i++) {
+            System.out.print("Path " + (i + 1) + ": ");
+            for (int j = 0; j < a.get(i).size(); j++) {
+                System.out.print(Arrays.toString(a.get(i).get(j)));
+            }
+            System.out.println();
+        }
     }
 }
